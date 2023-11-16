@@ -2,7 +2,6 @@ import numpy as np
 import os
 from PIL import Image
 from matplotlib import pyplot as plt
-from numpy.ma.core import mean
 
 IMAGE_FOLDER = "./Dataset/"
 IMAGE_FILES = os.listdir(IMAGE_FOLDER)
