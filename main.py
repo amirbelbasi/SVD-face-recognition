@@ -2,85 +2,99 @@ import numpy as np
 import os
 from PIL import Image
 from matplotlib import pyplot as plt
+from numpy.ma.core import mean
 
-FOLDER = "./Dataset/"
-FILES = os.listdir(FOLDER)
-TEST_DIR = "./Testset/"
+IMAGE_FOLDER = "./Dataset/"
+IMAGE_FILES = os.listdir(IMAGE_FOLDER)
+TEST_FOLDER = "./Testset/"
 
-def load_images_train_and_test(TEST):
-    test = np.asarray(Image.open(TEST)).flatten()
-    train = [np.asarray(Image.open(FOLDER + name)).flatten() for name in FILES]
-    train = np.array(train)
-    return test, train
+def load_images_training_and_testing(TEST_IMAGE_PATH):
+    test_img = np.asarray(Image.open(TEST_IMAGE_PATH)).flatten()
+    train_imgs = []
+    for img_name in IMAGE_FILES:
+        train_imgs.append(np.asarray(Image.open(IMAGE_FOLDER + img_name)).flatten())
+    train_imgs = np.array(train_imgs)
+    return test_img, train_imgs
+   
+def normalize(test_img, train_imgs):
+    mean_img = np.mean(train_imgs, axis=0)
+    normalized_train_imgs = train_imgs - mean_img
+    normalized_test_img = test_img - mean_img
+    return normalized_test_img, normalized_train_imgs
 
-def normalize(test, train):
-    mean_image = np.mean(train, axis=0)
-    normalized_train = train - mean_image
-    normalized_test = test - mean_image
-    return normalized_test, normalized_train
-
-def svd_function(images):
+def singular_value_decomposition(images):
     return np.linalg.svd(images, full_matrices=False)
 
-def project_and_calculate_weights(img, u):
+def project_and_compute_weights(img, u):
     return np.multiply(img, u)
 
-def predict(test, train):
-    errors = np.linalg.norm(train - test, axis=0)
+def predict(test_img, train_imgs):
+    errors = np.empty(train_imgs.shape[1])
+    for i in range(0, train_imgs.shape[1]):
+        errors[i] = np.linalg.norm(train_imgs[:, i] - test_img)
     return np.argmin(errors)
 
-def plot_face(tested, predicted, test_file, predicted_file, result):
-    f, axes = plt.subplots(1, 2)
-    
-    axes[0].set_title(f'Test Image ({test_file})', fontsize=10)
-    axes[0].imshow(tested, cmap='gray')
+def display_images(tested_img, predicted_img, test_file, predicted_file, result):
+    fig = plt.figure()
+    test_plot = fig.add_subplot(1, 2, 1)
+    test_plot.set_title(f'Test Image ({test_file})', fontsize=10)
+    plt.imshow(tested_img, cmap='gray')
 
-    axes[1].set_title(f'Predicted Image ({predicted_file})', fontsize=10, color='green' if result else 'red')
-    axes[1].imshow(predicted, cmap='gray')
+    test_plot = fig.add_subplot(1, 2, 2)
+    color = 'green' if result else 'red'
+    test_plot.set_title(f'Predicted Image ({predicted_file})', fontsize=10, color=color)
+    plt.imshow(predicted_img, cmap='gray')
 
     plt.show(block=True)
 
 if __name__ == "__main__":
-    true_predicts = 0
-    all_predicts = 0
+    correct_predictions = 0
+    total_predictions = 0
+    for TEST_FILE in os.listdir(TEST_FOLDER):
+        # Load training and test images
+        test_image, training_images = load_images_training_and_testing(TEST_FOLDER + TEST_FILE)
 
-    for TEST_FILE in os.listdir(TEST_DIR):
-        # Loading train and test
-        test, train = load_images_train_and_test(TEST_DIR + TEST_FILE)
-
-        # Normalizing train and test
-        test, train = normalize(test, train)
-        test = test.reshape((test.size, 1))
+        # Normalize training and test images
+        test_image, training_images = normalize(test_image, training_images)
+        test_image = test_image.T
+        training_images = training_images.T
+        test_image = np.reshape(test_image, (test_image.size, 1))
 
         # Singular value decomposition
-        u, _, _ = svd_function(train.T)
+        u, _, _ = singular_value_decomposition(training_images)
 
-        # Weights for test
-        w_test = project_and_calculate_weights(test, u).flatten()
+        # Weight for test
+        weights_test_image = project_and_compute_weights(test_image, u)
+        weights_test_image = np.array(weights_test_image, dtype='int8').flatten()
 
-        # Weights for train set
-        w_train = project_and_calculate_weights(train.T, u)
+        # Weights for training set
+        weights_training_images = []
+        for i in range(training_images.shape[1]):
+            weights_i = project_and_compute_weights(np.reshape(training_images[:, i], (training_images[:, i].size, 1)), u)
+            weights_i = np.array(weights_i, dtype='int8').flatten()
+            weights_training_images.append(weights_i)
+        weights_training_images = np.array(weights_training_images).T
 
-        # Predict
-        index_of_most_similar_face = predict(w_test, w_train)
+        # Predict 
+        index_of_most_similar_face = predict(weights_test_image, weights_training_images)
 
         # Showing results
         print("Test : " + TEST_FILE)
-        print(f"The predicted face is: {FILES[index_of_most_similar_face]}")
+        print(f"The predicted face is: {IMAGE_FILES[index_of_most_similar_face]}")
         print("\n***************************\n")
 
         # Calculating Accuracy
-        all_predicts += 1
-        if FILES[index_of_most_similar_face].split("-")[0] == TEST_FILE.split("-")[0]:
-            true_predicts += 1
+        total_predictions += 1
+        if IMAGE_FILES[index_of_most_similar_face].split("-")[0] == TEST_FILE.split("-")[0]:
+            correct_predictions += 1
             # Plotting correct predictions 
-            plot_face(Image.open(TEST_DIR + TEST_FILE), Image.open(FOLDER + FILES[index_of_most_similar_face]), 
-                        TEST_FILE, FILES[index_of_most_similar_face], True)
+            display_images(Image.open(TEST_FOLDER + TEST_FILE), Image.open(IMAGE_FOLDER + IMAGE_FILES[index_of_most_similar_face]), 
+                            TEST_FILE, IMAGE_FILES[index_of_most_similar_face], True)
         else:
             # Plotting wrong predictions
-            plot_face(Image.open(TEST_DIR + TEST_FILE), Image.open(FOLDER + FILES[index_of_most_similar_face]),
-                        TEST_FILE, FILES[index_of_most_similar_face], False)
+            display_images(Image.open(TEST_FOLDER + TEST_FILE), Image.open(IMAGE_FOLDER + IMAGE_FILES[index_of_most_similar_face]),
+                            TEST_FILE, IMAGE_FILES[index_of_most_similar_face], False)
 
     # Showing Accuracy
-    accuracy = true_predicts / all_predicts
-    print(f'Accuracy: {"{:.2f}".format(accuracy * 100)}%')
+    accuracy = correct_predictions / total_predictions
+    print(f'Accuracy : {"{:.2f}".format(accuracy * 100)} %')
