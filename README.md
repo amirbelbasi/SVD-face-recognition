@@ -1,5 +1,6 @@
 # face-recognition-SVD
 
 * Face Recognition using SVD | Applied Linear Algebra
-  * Trained fully-connected MLP NN with stochastic gradient descent algorithm for image classification of decimal digits
-  * Utilized Python, Jupyter notebook for plotting, NumPy for feed forward & backward calculations, and MNIST dataset for training & evaluation
+  * Trained a face recognition model using singular value decomposition (SVD)
+  * Utilized Python, normalization of image using the mean image, NumPy for matrix calculations, and the given face dataset & testset for training & evaluation
+
