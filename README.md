@@ -2,7 +2,7 @@
 
 * Face Recognition using SVD | Applied Linear Algebra
   * Trained a face recognition model using singular value decomposition (SVD) with 96.97% precision
-  * Utilized Python, normalization of image using the mean image, NumPy for matrix calculations, and the given face dataset & testset for training & evaluation
+  * Utilized Python, normalization of image using the mean image, NumPy for matrix calculations, and the given face dataset & testset for training & evaluation 
 
 ![image](https://github.com/amirbelbasi/face-recognition-SVD/assets/58425120/77e77952-0864-4dda-9803-c96e2d2bb563)
 
